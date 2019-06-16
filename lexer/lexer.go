@@ -2,7 +2,6 @@ package lexer
 
 import (
 	"go-playground/token"
-	"testing"
 )
 
 type Lexer struct {
@@ -15,39 +14,9 @@ type Lexer struct {
 	ch byte
 }
 
-//　テスト
-func TestNextToken(t *testing.T) {
-	input := `=+(){},;`
-	tests := []struct {
-		expectedType    token.TypeToken
-		expectedLiteral string
-	}{
-		{token.ASSIGN, "="},
-		{token.PLUS, "+"},
-		{token.LPAREN, "("},
-		{token.RPAREN, ")"},
-		{token.LBRACE, "{"},
-		{token.RBRACE, "}"},
-		{token.COMMA, ","},
-		{token.SEMICOLON, ";"},
-		{token.EOF, "EOF"},
-	}
-	l := new(input)
-	for i, tt := range tests {
-		tok := l.nextToken()
-		if tok.Type != tt.expectedType {
-			t.Fatalf("tests[%d] - tokentype wrong. expected=%q, got=%q", i, tt.expectedLiteral, tok.Type)
-		}
-		if tok.Literal != tt.expectedLiteral {
-			t.Fatalf("tests[%d] - literal wrong. expected=%q, got%q", i, tt.expectedLiteral, tok.Literal)
-		}
-	}
-}
-
 // 次のトークンを読み込む
 func (l *Lexer) nextToken() token.Token {
 	var tok token.Token
-
 	switch l.ch {
 	case '=':
 		tok = newToken(token.ASSIGN, l.ch)
@@ -68,9 +37,28 @@ func (l *Lexer) nextToken() token.Token {
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
+	default:
+		if isLetter(l.ch) {
+			tok.Literal = l.readIdentifier()
+			return tok
+		} else {
+			tok = newToken(token.ILLEGAL, l.ch)
+		}
 	}
 	l.readChar()
 	return tok
+}
+
+func (l *Lexer) readIdentifier() string {
+	position := l.position
+	for isLetter(l.ch) {
+		l.readChar()
+	}
+	return l.input[position:l.readPosition]
+}
+
+func isLetter(ch byte) bool {
+	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
 }
 
 //　Charを読み込む
@@ -91,7 +79,7 @@ func newToken(typeToken token.TypeToken, ch byte) token.Token {
 }
 
 // 引数の文字を元に、読みとった後の字句解析の構造体を返す。
-func new(input string) *Lexer {
+func createLexer(input string) *Lexer {
 	l := &Lexer{input: input}
 	l.readChar()
 	return l
